@@ -1,0 +1,5 @@
+.menv/
+.env
+.gradio/
+__pycache__/
+*.pdf
