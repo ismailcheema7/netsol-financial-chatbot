@@ -30,3 +30,5 @@ langchain-google-genai
 google-generativeai 
 langchain_core
 gradio
+python-jose
+passlib[bcrypt]
