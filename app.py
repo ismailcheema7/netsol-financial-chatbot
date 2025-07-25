@@ -41,6 +41,7 @@ client = MongoClient(mongo_uri)
 db = client["Netsol-Chatbot"]
 users_collection = db["users"]
 tokens_collection = db["tokens"]
+chat_history_collection = db["chat_history"]
 
 app = FastAPI()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/token")
@@ -242,11 +243,31 @@ async def health_check():
 
 # Endpoint
 @app.post("/chat", response_model=ChatResponse, dependencies=[Depends(oauth2_scheme)])
-def chat(request: ChatRequest):
+def chat(request: ChatRequest, current_user: Annotated[User, Depends(get_current_active_user)]):
     try:
-        messages = [HumanMessage(content=request.user_input)]
+        history = []
+        chat_history = chat_history_collection.find({"user_id": current_user.username})
+        for record in chat_history:
+            history.append((record['user_message'], record['bot_message']))
+
+        messages = []
+
+# Add historical messages (both user and bot messages)
+        for user_msg, bot_msg in history:
+            messages.append(HumanMessage(content=user_msg))
+            messages.append(AIMessage(content=bot_msg))
+
+        messages.append(HumanMessage(content=request.user_input))
         result = rag_agent.invoke({"messages": messages})
         answer = result["messages"][-1].content
+
+        chat_history_collection.insert_one({
+            "user_id": current_user.username,
+            "user_message": request.user_input,
+            "bot_message": answer,
+            "timestamp": datetime.now(timezone.utc)
+        })
+
         return ChatResponse(answer=answer)
 
     except Exception as e:
