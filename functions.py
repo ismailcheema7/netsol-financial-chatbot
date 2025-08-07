@@ -6,8 +6,6 @@ import gradio as gr
 from rag_pipeline import rag_agent
 import json
 
-
-
 def chat_with_agent(message, history):
     """Function to handle chat interactions with the RAG agent"""
     try:
